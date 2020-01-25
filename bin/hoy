@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+# -*- mode: ruby; coding: utf-8-unix; -*-
+require 'pathname'
+require 'optparse'
+require 'uri'
+
+def parse_arguments(raw_args)
+  options = {}
+  parser = OptionParser.new do |opts|
+  end
+
+  options[:_] = parser.parse raw_args
+  options[:url] = URI.parse( raw_args.first )
+
+  options
+end
+
+def main(args)
+  url =  args[:url]
+
+  base_dir = Pathname.new( '~/opt/src/' ).expand_path
+  host_dir = base_dir.join( url.hostname )
+
+  parent_dir = host_dir.join( '.' + File.dirname( url.path ) )
+
+  unless parent_dir.exist? then
+    parent_dir.mkpath
+  end
+
+  origin = url.hostname
+
+  `git -C #{parent_dir.to_s} clone --origin #{origin} #{url.to_s}`
+end
+
+
+options= parse_arguments ARGV
+
+main options
