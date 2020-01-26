@@ -2,6 +2,7 @@
 # -*- mode: ruby; coding: utf-8-unix; -*-
 require 'pathname'
 require 'optparse'
+require 'logger'
 require 'uri'
 
 def parse_arguments(raw_args)
@@ -15,23 +16,53 @@ def parse_arguments(raw_args)
   options
 end
 
+def get_log_filename(app_name)
+  filename = "#{app_name}.#{Time.now.strftime( '%Y-%m-%d' )}.log"
+
+  base_dir = Pathname.new( '~/var/log/' )
+  log_file = base_dir + filename
+
+  log_file.expand_path
+end
+
+def get_logger(filename)
+  logger = Logger.new( filename.to_s )
+  logger.level = Logger::DEBUG
+  logger.formatter =  proc do |serverity, datetime, prog_name, message|
+    "#{datetime} #{serverity} [#{prog_name}] - #{message}\n"
+  end
+
+  logger
+end
+
 def main(args)
-  url =  args[:url]
+  logger = get_logger( get_log_filename( 'hoy' ) )
+
+  url    =  args[:url]
+  logger.info { "#{url} の clone を行います。" }
 
   base_dir = Pathname.new( '~/opt/src/' ).expand_path
+  logger.debug { "base_dir: #{base_dir}" }
+
   host_dir = base_dir.join( url.hostname )
+  logger.debug { "host_dir: #{host_dir}" }
 
   parent_dir = host_dir.join( '.' + File.dirname( url.path ) )
+  logger.debug { "ディレクトリパス #{parent_dir} に clone します。" }
 
   unless parent_dir.exist? then
     parent_dir.mkpath
+    logger.info { "#{parent_dir} を作成しました。" }
   end
 
   origin = url.hostname
+  logger.debug { "origin 名は #{origin} になります。" }
 
+  logger.debug { "git -C #{parent_dir.to_s} clone --origin #{origin} #{url.to_s}" }
   `git -C #{parent_dir.to_s} clone --origin #{origin} #{url.to_s}`
-end
 
+  logger.info { "clone が完了しました。" }
+end
 
 options= parse_arguments ARGV
 
